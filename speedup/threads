@@ -1,83 +1,83 @@
 import hashlib
-import threading
 import time
+import threading
 
-hash_alvo = "ca6ae33116b93e57b87810a27296fc36"
-total = 1000000000
+def md5_string(texto):
+    return hashlib.md5(texto.encode('utf-8')).hexdigest()
 
 senha_encontrada = False
 lock = threading.Lock()
 
-
-def gerar_md5(texto):
-    return hashlib.md5(texto.encode()).hexdigest()
-
-
-def quebrar_hash(inicio, fim, nome_thread):
+def buscahash_intervalo(hashbuscado, inicio, fim, nome_thread):
 
     global senha_encontrada
 
-    for i in range(inicio, fim):
+    for numero in range(inicio, fim):
 
         if senha_encontrada:
             return
 
-        senha = f"{i:09d}"
+        combinacao = f"{numero:09d}"
+        hash_valor = md5_string(combinacao)
 
-        if gerar_md5(senha) == hash_alvo:
+        if hashbuscado == hash_valor:
             with lock:
                 senha_encontrada = True
-                print(f"\nSenha encontrada pela {nome_thread}: {senha}")
+                print(f"\n{nome_thread} encontrou a senha: {combinacao}")
             return
 
-        # progresso a cada 1 milhão
-        if i % 1000000 == 0 and i != inicio:
-            print(f"{nome_thread} tentou até {i}")
 
-
-def executar(numero_threads):
+def buscahash9_threads(hashbuscado, num_threads):
 
     global senha_encontrada
     senha_encontrada = False
 
+    total = 1000000000
+    intervalo = total // num_threads
+
     threads = []
-    intervalo = total // numero_threads
 
-    inicio_total = time.time()
-
-    for i in range(numero_threads):
+    for i in range(num_threads):
 
         inicio = i * intervalo
-        fim = (i + 1) * intervalo if i < numero_threads - 1 else total
+
+        if i == num_threads - 1:
+            fim = total
+        else:
+            fim = (i + 1) * intervalo
 
         t = threading.Thread(
-            target=quebrar_hash,
-            args=(inicio, fim, f"Thread {i+1}")
+            target=buscahash_intervalo,
+            args=(hashbuscado, inicio, fim, f"Thread {i+1}")
         )
 
         threads.append(t)
 
-    # iniciar todas as threads (execução paralela)
+    inicio_tempo = time.time()
+
+    # inicia todas as threads
     for t in threads:
         t.start()
 
-    # aguardar finalização
+    # aguarda terminar
     for t in threads:
         t.join()
 
-    fim_total = time.time()
+    fim_tempo = time.time()
 
-    print(f"\nTempo total com {numero_threads} threads: {fim_total - inicio_total:.2f} segundos")
+    print(f"\nTempo de execução: {fim_tempo - inicio_tempo:.4f} segundos")
 
 
-# ==============================
-# Escolha da quantidade de threads
-# ==============================
+# ==========================
+# EXECUÇÃO
+# ==========================
 
-print("Escolha o número de threads (2, 4, 8 ou 12): ")
-n = int(input())
+hashbuscado = "ca6ae33116b93e57b87810a27296fc36"
 
-if n in [2, 4, 8, 12]:
-    executar(n)
+print("Escolha número de threads (2, 4, 8 ou 12):")
+threads = int(input())
+
+if threads in [2,4,8,12]:
+    buscahash9_threads(hashbuscado, threads)
 else:
     print("Número de threads inválido.")
