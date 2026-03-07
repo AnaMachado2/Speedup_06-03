@@ -1,0 +1,83 @@
+import hashlib
+import threading
+import time
+
+hash_alvo = "ca6ae33116b93e57b87810a27296fc36"
+total = 1000000000
+
+senha_encontrada = False
+lock = threading.Lock()
+
+
+def gerar_md5(texto):
+    return hashlib.md5(texto.encode()).hexdigest()
+
+
+def quebrar_hash(inicio, fim, nome_thread):
+
+    global senha_encontrada
+
+    for i in range(inicio, fim):
+
+        if senha_encontrada:
+            return
+
+        senha = f"{i:09d}"
+
+        if gerar_md5(senha) == hash_alvo:
+            with lock:
+                senha_encontrada = True
+                print(f"\nSenha encontrada pela {nome_thread}: {senha}")
+            return
+
+        # progresso a cada 1 milhão
+        if i % 1000000 == 0 and i != inicio:
+            print(f"{nome_thread} tentou até {i}")
+
+
+def executar(numero_threads):
+
+    global senha_encontrada
+    senha_encontrada = False
+
+    threads = []
+    intervalo = total // numero_threads
+
+    inicio_total = time.time()
+
+    for i in range(numero_threads):
+
+        inicio = i * intervalo
+        fim = (i + 1) * intervalo if i < numero_threads - 1 else total
+
+        t = threading.Thread(
+            target=quebrar_hash,
+            args=(inicio, fim, f"Thread {i+1}")
+        )
+
+        threads.append(t)
+
+    # iniciar todas as threads (execução paralela)
+    for t in threads:
+        t.start()
+
+    # aguardar finalização
+    for t in threads:
+        t.join()
+
+    fim_total = time.time()
+
+    print(f"\nTempo total com {numero_threads} threads: {fim_total - inicio_total:.2f} segundos")
+
+
+# ==============================
+# Escolha da quantidade de threads
+# ==============================
+
+print("Escolha o número de threads (2, 4, 8 ou 12): ")
+n = int(input())
+
+if n in [2, 4, 8, 12]:
+    executar(n)
+else:
+    print("Número de threads inválido.")
